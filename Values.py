@@ -1,0 +1,63 @@
+DIRECTIONS = ("NORTH", "EAST", "SOUTH", "WEST")
+DIRECTION_LABELS = {
+    "NORTH": "North",
+    "EAST": "East",
+    "SOUTH": "South",
+    "WEST": "West",
+}
+VECTOR_ORDER_TEXT = "[North, East, South, West]"
+
+# Traffic light timing settings
+MIN_GREEN_SECONDS = 5.0
+MAX_GREEN_SECONDS = 15.0
+YELLOW_SECONDS = 5.0
+
+# Priority settings
+DEFAULT_CAR_PRIORITY = 1.0
+BASELINE_PRIORITY_SCORE = 120.0
+MAX_WAIT_TIME_SECONDS = 120.0
+MIN_QUEUE_ADVANTAGE_TO_SWITCH = BASELINE_PRIORITY_SCORE
+
+# Simulation settings
+DEFAULT_SCENARIO = "balanced_cycle"
+DEFAULT_FRAME_DURATION_SECONDS = 1.0
+DEFAULT_FRAME_DELAY_MS = 450
+
+# Window and drawing settings
+WINDOW_NAME = "Smart Traffic Simulator"
+WINDOW_WIDTH = 1200
+WINDOW_HEIGHT = 820
+INTERSECTION_CENTER = (600, 410)
+ROAD_HALF_WIDTH = 90
+QUEUE_STEP = 38
+MAX_RENDERED_CARS_PER_SIDE = 10
+
+FONT = 0
+FONT_SCALE = 0.62
+TEXT_THICKNESS = 2
+
+BACKGROUND_COLOR = (235, 235, 235)
+ROAD_COLOR = (85, 85, 85)
+INTERSECTION_COLOR = (65, 65, 65)
+LANE_MARKING_COLOR = (245, 245, 245)
+TEXT_COLOR = (35, 35, 35)
+SUBTEXT_COLOR = (80, 80, 80)
+PANEL_COLOR = (255, 255, 255)
+PANEL_BORDER_COLOR = (195, 195, 195)
+GREEN_LIGHT_COLOR = (0, 180, 0)
+YELLOW_LIGHT_COLOR = (0, 210, 255)
+RED_LIGHT_COLOR = (0, 0, 220)
+ACTIVE_QUEUE_COLOR = (90, 190, 90)
+YELLOW_QUEUE_COLOR = (90, 210, 230)
+WAITING_QUEUE_COLOR = (255, 176, 64)
+CAR_OUTLINE_COLOR = (40, 40, 40)
+SCENARIO_NOTE_COLOR = (120, 60, 0)
+
+RUNTIME_KEY_HELP = (
+    ("Space", "Pause or resume the simulation"),
+    ("N", "Load the next scenario"),
+    ("P", "Load the previous scenario"),
+    ("R", "Restart the current scenario"),
+    ("S", "Advance one frame while paused"),
+    ("Q / Esc", "Quit the simulator"),
+)
