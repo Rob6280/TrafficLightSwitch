@@ -1,4 +1,4 @@
-# TrafficLightSwitch
+# SmartTraffic - Adaptive Traffic Signal Control System
 
 An intelligent traffic light controller that dynamically manages signal timing based on vehicle queue priorities and lane wait times.
 
