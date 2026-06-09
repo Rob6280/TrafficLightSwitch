@@ -15,172 +15,139 @@ def _build_scenarios() -> dict[str, TrafficScenario]:
     scenarios = [
         TrafficScenario(
             slug="balanced_cycle",
-            title="Balanced Cycle",
+            title="balanced_cycle",
             description=(
-                "Traffic stays moderate on every side, with each direction becoming "
-                "slightly busier in turn."
+                "Typical daytime traffic. Demand fluctuates gradually "
+                "across all four approaches."
             ),
             expected_behavior=(
                 "The signal should rotate smoothly without starving any side."
             ),
             frames=tuple(
-                _segment((4, 4, 4, 4), 2, "Balanced opening")
-                + _segment((6, 4, 3, 2), 3, "North takes a small lead")
-                + _segment((3, 7, 4, 3), 3, "East becomes the busiest approach")
-                + _segment((3, 3, 8, 4), 3, "South builds up late")
-                + _segment((4, 3, 3, 9), 3, "West sees a strong surge")
-                + _segment((4, 4, 4, 4), 2, "Queues normalize again")
+                _segment((3, 3, 2, 2), 10, "Light traffic")
+                + _segment((4, 3, 2, 2), 10, "North slightly higher")
+                + _segment((4, 4, 3, 2), 10, "Balanced growth")
+                + _segment((5, 4, 3, 3), 10, "Moderate flow")
+                + _segment((5, 5, 4, 3), 10, "Balanced")
+                + _segment((5, 5, 5, 4), 10, "Wait time Exceeded North")
+                + _segment((5, 5, 5, 5), 10, "Wait time Exceeded East")
+                + _segment((4, 4, 5, 5), 10, "Wait time Exceeded South")
+                + _segment((5, 5, 4, 5), 10, "Wait time Exceeded West")
+                + _segment((4, 5, 4, 4), 10, "Return to light flow")
             ),
-            frame_duration_seconds=DEFAULT_FRAME_DURATION_SECONDS,
         ),
         TrafficScenario(
-            slug="north_peak_then_east",
-            title="North Peak Then East Recovery",
+            slug="single_corridor_dominance",
+            title="Single Corridor Dominance",
             description=(
-                "North starts with a large queue, then East gradually overtakes it."
+                "One approach remains significantly busier than the others "
+                "for an extended period."
             ),
             expected_behavior=(
-                "North should get the initial green, then the controller should move "
-                "to East after the minimum hold is satisfied."
+                "The signal should switch back to north after min green."
             ),
             frames=tuple(
-                _segment((11, 2, 1, 2), 4, "North is heavily backed up")
-                + _segment((9, 5, 2, 2), 3, "East begins building while North clears")
-                + _segment((5, 10, 2, 2), 4, "East overtakes North")
-                + _segment((3, 8, 4, 3), 3, "East remains dominant")
-                + _segment((2, 4, 5, 3), 2, "Traffic settles across the junction")
+                _segment((12, 2, 2, 2), 25, "North dominant")
+                + _segment((10, 3, 2, 2), 25, "North remains dominant")
+                + _segment((8, 3, 3, 2), 25, "North easing")
+                + _segment((6, 4, 4, 3), 25, "Traffic normalizing")
             ),
-            frame_duration_seconds=DEFAULT_FRAME_DURATION_SECONDS,
         ),
         TrafficScenario(
-            slug="min_hold_protection",
-            title="Minimum Hold Protection",
+            slug="rotating_rush_waves",
+            title="Rotating Rush Waves",
             description=(
-                "The largest queue changes every frame to test whether the controller "
-                "avoids flickering between directions."
+                "Demand rotates around the intersection, simulating changing "
+                "traffic patterns over time."
             ),
             expected_behavior=(
-                "The light should not thrash every second because minimum green time "
-                "must be honored first."
+                "The signal should rotate smoothly to serve the busy lanes."
             ),
             frames=tuple(
-                frame_from_input({"counts": (9, 1, 1, 1), "note": "North spikes first"})
-                for _ in range(1)
-            )
-            + tuple(
-                frame_from_input(raw_frame)
-                for raw_frame in (
-                    {"counts": (1, 9, 1, 1), "note": "East suddenly becomes busiest"},
-                    {"counts": (1, 1, 9, 1), "note": "South takes over next"},
-                    {"counts": (1, 1, 1, 9), "note": "West spikes after South"},
-                    {"counts": (9, 1, 1, 1), "note": "North returns to the lead"},
-                    {"counts": (1, 9, 1, 1), "note": "East jumps again"},
-                    {"counts": (1, 1, 9, 1), "note": "South rises again"},
-                    {"counts": (1, 1, 1, 9), "note": "West rises again"},
-                    {"counts": (9, 1, 1, 1), "note": "North spikes once more"},
-                    {"counts": (1, 9, 1, 1), "note": "East spikes once more"},
-                    {"counts": (1, 1, 9, 1), "note": "South spikes once more"},
-                    {"counts": (1, 1, 1, 9), "note": "West spikes once more"},
-                )
+                _segment((12, 2, 2, 2), 25, "North rush")
+                + _segment((2, 12, 2, 4), 25, "East rush")
+                + _segment((4, 2, 12, 2), 25, "South rush")
+                + _segment((2, 2, 2, 12), 25, "West rush")
             ),
-            frame_duration_seconds=DEFAULT_FRAME_DURATION_SECONDS,
         ),
         TrafficScenario(
-            slug="max_green_rotation",
-            title="Maximum Green Rotation",
+            slug="near_threshold_competition",
+            title="Near Threshold Competition",
             description=(
-                "North stays dominant for a long time to confirm the signal does not "
-                "stay green forever on one side."
+                "Traffic remains competitive between approaches without "
+                "creating large score advantages."
             ),
             expected_behavior=(
-                "Even with North remaining busy, the controller should rotate after "
-                "maximum green time is reached."
+                "The signal should rotate smoothly without skipping."
             ),
             frames=tuple(
-                _segment((15, 2, 2, 2), 8, "North remains clearly dominant")
-                + _segment((14, 3, 2, 2), 5, "North still dominates past max hold")
-                + _segment((10, 6, 2, 2), 5, "East grows while North remains busy")
+                _segment((7, 6, 5, 5), 25, "North slightly ahead")
+                + _segment((6, 7, 5, 5), 25, "East slightly ahead")
+                + _segment((5, 6, 7, 5), 25, "South slightly ahead")
+                + _segment((5, 5, 6, 7), 25, "West slightly ahead")
             ),
-            frame_duration_seconds=DEFAULT_FRAME_DURATION_SECONDS,
         ),
         TrafficScenario(
-            slug="rush_hour_wave",
-            title="Rush Hour Wave",
+            slug="starvation_prevention",
+            title="Starvation Prevention",
             description=(
-                "Demand moves around the junction in a wave, similar to directional "
-                "bursts during rush hour."
+                "One heavily demanded approach competes against "
+                "low-volume approaches to test fairness mechanisms."
             ),
             expected_behavior=(
-                "The controller should follow the moving wave and keep switching to "
-                "the side that becomes dominant next."
+                "The signal should ensure that one side is not starved for too long."
             ),
             frames=tuple(
-                _segment((3, 2, 1, 1), 3, "Light traffic before the rush")
-                + _segment((2, 7, 2, 1), 3, "East receives the first wave")
-                + _segment((1, 3, 9, 2), 3, "South becomes dominant next")
-                + _segment((2, 2, 4, 10), 3, "West gets the strongest burst")
-                + _segment((5, 4, 3, 2), 3, "North begins to recover")
-                + _segment((2, 2, 2, 2), 3, "Rush hour fades out")
+                _segment((8, 2, 2, 2), 25, "North busy")
+                + _segment((8, 2, 2, 2), 25, "North still busy")
+                + _segment((8, 2, 2, 2), 25, "North still busy")
+                + _segment((8, 2, 2, 2), 25, "North still busy")
             ),
-            frame_duration_seconds=DEFAULT_FRAME_DURATION_SECONDS,
         ),
         TrafficScenario(
-            slug="empty_then_recovery",
-            title="Empty Then Recovery",
+            slug="detector_noise",
+            title="Detector Noise",
             description=(
-                "The junction starts empty, then isolated queues appear and compete."
+                "Small count fluctuations intended to "
+                "emulate noisy detector measurements."
             ),
             expected_behavior=(
-                "The controller should react cleanly once real queues show up instead "
-                "of remaining stuck in an idle state."
+                "The signal should rotate smoothly without starving any side."
             ),
             frames=tuple(
-                _segment((0, 0, 0, 0), 3, "No cars are waiting anywhere")
-                + _segment((0, 0, 9, 0), 3, "A South queue appears suddenly")
-                + _segment((0, 5, 6, 0), 3, "East begins competing with South")
-                + _segment((0, 8, 2, 7), 3, "East and West are both heavily loaded")
+                (
+                    _segment((6, 5, 5, 5), 5, "Noise")
+                    + _segment((5, 6, 5, 5), 5, "Noise")
+                    + _segment((6, 5, 6, 5), 5, "Noise")
+                    + _segment((5, 5, 6, 6), 5, "Noise")
+                    + _segment((7, 5, 5, 4), 5, "Noise")
+                    + _segment((5, 7, 4, 5), 5, "Noise")
+                    + _segment((6, 4, 7, 5), 5, "Noise")
+                    + _segment((5, 5, 4, 7), 5, "Noise")
+                ) * 2
+                + _segment((6, 5, 5, 5), 10, "Stabilizing")
+                + _segment((5, 6, 5, 5), 10, "Stabilizing")
             ),
-            frame_duration_seconds=DEFAULT_FRAME_DURATION_SECONDS,
         ),
         TrafficScenario(
-            slug="baseline_score_cycle_skip",
-            title="Baseline Score Cycle Skip",
+            slug="empty_intersection_recovery",
+            title="Empty Intersection Recovery",
             description=(
-                "West waits while North and East are served, then its normal "
-                "priority score becomes large enough to skip South in the cycle."
+                "Tests recovery from an idle state once vehicles begin "
+                "appearing at the intersection."
             ),
             expected_behavior=(
-                "The controller should move North to East by cycle first, then skip "
-                "South and serve West once West clears the baseline score without "
-                "using any wait-time multipliers."
+                "The signal should recover smoothly from an idle state."
             ),
             frames=tuple(
-                _segment((8, 1, 1, 4), 18, "North is busy while West starts waiting")
-                + _segment((5, 1, 1, 4), 8, "East is next in cycle; West keeps aging")
-                + _segment((2, 1, 1, 4), 8, "West should now justify skipping South")
-                + _segment((1, 1, 1, 0), 4, "West clears after receiving service")
+                _segment((0, 0, 0, 0), 25, "Empty")
+                + _segment((0, 0, 0, 0), 25, "Still empty")
+                + _segment((4, 2, 2, 2), 25, "Traffic appears")
+                + _segment((6, 3, 2, 2), 25, "North builds")
             ),
-            frame_duration_seconds=DEFAULT_FRAME_DURATION_SECONDS,
-        ),
-        TrafficScenario(
-            slug="max_wait_force_service",
-            title="Maximum Wait Force Service",
-            description=(
-                "A single West car waits beyond the configured maximum wait time "
-                "while North has the larger queue."
-            ),
-            expected_behavior=(
-                "West should become the forced next green once its wait exceeds "
-                f"{MAX_WAIT_TIME_SECONDS:.0f} seconds, ignoring normal lane scores."
-            ),
-            frames=tuple(
-                _segment((10, 0, 0, 1), 1, "North starts higher; West begins waiting")
-                + _segment((10, 0, 0, 1), 1, "West crosses the maximum wait limit")
-                + _segment((10, 0, 0, 1), 1, "Yellow completes before forced West green")
-            ),
-            frame_duration_seconds=61.0,
         ),
     ]
+
 
     return {scenario.slug: scenario for scenario in scenarios}
 

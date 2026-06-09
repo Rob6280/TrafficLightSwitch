@@ -33,6 +33,7 @@ class DirectionPriority:
     score: float
     longest_wait_seconds: float
     has_over_max_wait: bool
+    lane_wait_seconds: float
 
 
 @dataclass(frozen=True)
@@ -52,7 +53,12 @@ class VehiclePriorityTracker:
     cars_by_direction: dict[str, list[CarState]] = field(
         default_factory=lambda: {direction: [] for direction in DIRECTIONS}
     )
-
+    lane_waits: dict[str, float] = field(
+        default_factory=lambda: {
+            direction: 0.0
+            for direction in DIRECTIONS
+        }
+    )
     def update_from_counts(
         self,
         counts: Mapping[str, int],
@@ -79,16 +85,15 @@ class VehiclePriorityTracker:
             is_green_direction = (
                 signal_phase == SIGNAL_GREEN and direction == green_direction
             )
-
+            if target_count == 0:
+                self.lane_waits[direction] = 0.0
+            elif is_green_direction:
+                self.lane_waits[direction]=0.0
+            else:
+                self.lane_waits[direction]+=elapsed_seconds
+            
             for car in cars:
-                if is_green_direction:
-                    car.waiting_seconds = 0.0
-                else:
-                    car.waiting_seconds += elapsed_seconds
-
-    def reset_waits(self, direction: str) -> None:
-        for car in self.cars_by_direction[direction]:
-            car.waiting_seconds = 0.0
+                car.waiting_seconds += elapsed_seconds
 
     def direction_priorities(
         self,
@@ -97,17 +102,20 @@ class VehiclePriorityTracker:
         priorities: dict[str, DirectionPriority] = {}
 
         for direction, cars in self.cars_by_direction.items():
-            longest_wait = max(
+            longest_vehicle_wait = max(
                 (car.waiting_seconds for car in cars),
                 default=0.0,
             )
+
+            lane_wait=self.lane_waits[direction]
+
             priorities[direction] = DirectionPriority(
                 car_count=len(cars),
                 score=sum(car.priority_score() for car in cars),
-                longest_wait_seconds=longest_wait,
-                has_over_max_wait=any(
-                    car.waiting_seconds > max_wait_time_seconds
-                    for car in cars
+                longest_wait_seconds=longest_vehicle_wait,
+                lane_wait_seconds=lane_wait,
+                has_over_max_wait=(
+                    lane_wait > max_wait_time_seconds
                 ),
             )
 
@@ -148,7 +156,7 @@ class TrafficLightController:
         priorities = self.tracker.direction_priorities(self.max_wait_time_seconds)
 
         if self.signal_phase == SIGNAL_YELLOW:
-            forced_target = self._max_wait_direction(priorities, include_current=True)
+            forced_target = self._max_wait_direction(priorities)
             redirected_by_force = False
             if forced_target is not None:
                 self.forced_direction = forced_target
@@ -167,7 +175,7 @@ class TrafficLightController:
                     reason=(
                         f"Max-wait override redirected the pending green to "
                         f"{self._direction_label(forced_target)} after a vehicle "
-                        f"waited {forced_priority.longest_wait_seconds:.0f}s. "
+                        f"waited {forced_priority.lane_wait_seconds:.0f}s. "
                         f"Continuing yellow clearance first."
                     ),
                 )
@@ -208,7 +216,7 @@ class TrafficLightController:
                     changed=False,
                     reason=(
                         f"{self._direction_label(forced_target)} has a vehicle "
-                        f"waiting {forced_priority.longest_wait_seconds:.0f}s, "
+                        f"waiting {forced_priority.lane_wait_seconds:.0f}s, "
                         f"above the {self.max_wait_time_seconds:.0f}s max. "
                         f"It stays green under max-wait override."
                     ),
@@ -218,8 +226,8 @@ class TrafficLightController:
             return self._start_yellow(
                 forced_target,
                 (
-                    f"{self._direction_label(forced_target)} has a vehicle waiting "
-                    f"{forced_priority.longest_wait_seconds:.0f}s, above the "
+                    f"{self._direction_label(forced_target)} has been waiting "
+                    f"{forced_priority.lane_wait_seconds:.0f}s, above the "
                     f"{self.max_wait_time_seconds:.0f}s max. Max-wait override "
                     f"ignores lane scores and forces it as the next green."
                 ),
@@ -242,17 +250,20 @@ class TrafficLightController:
             )
 
         target_direction, target_score = self._highest_priority_direction(priorities)
+        current_score = priorities[self.current_direction].score
+        score_advantage = target_score - current_score
         if (
             target_direction is not None
             and target_direction != self.current_direction
-            and target_score >= self.baseline_priority_score
+            and score_advantage >= self.baseline_priority_score
         ):
             return self._start_yellow(
                 target_direction,
                 (
-                    f"{self._direction_label(target_direction)} reached priority "
-                    f"{target_score:.1f}, which clears the baseline "
-                    f"{self.baseline_priority_score:.1f}."
+                    f"{self._direction_label(target_direction)} exceeds "
+                    f"{self._direction_label(self.current_direction)} by "
+                    f"{score_advantage:.1f} priority points, clearing the "
+                    f"{self.baseline_priority_score:.1f} switching threshold."
                 ),
             )
 
@@ -270,16 +281,16 @@ class TrafficLightController:
 
     def _activate_initial_green(self) -> SwitchDecision:
         priorities = self.tracker.direction_priorities(self.max_wait_time_seconds)
-        forced_target = self._max_wait_direction(priorities, include_current=True)
+        forced_target = self._max_wait_direction(priorities)
 
         if forced_target is not None:
             target_direction = forced_target
             target_score = priorities[target_direction].score
-            longest_wait = priorities[target_direction].longest_wait_seconds
+            longest_wait = priorities[target_direction].lane_wait_seconds
             self.forced_direction = target_direction
             reason = (
                 f"Initial green forced to {self._direction_label(target_direction)} "
-                f"because a vehicle waited {longest_wait:.0f}s, above the "
+                f"because lane waited {longest_wait:.0f}s, above the "
                 f"{self.max_wait_time_seconds:.0f}s max."
             )
         else:
@@ -299,7 +310,6 @@ class TrafficLightController:
         self.pending_direction = None
         self.green_elapsed_seconds = 0.0
         self.yellow_elapsed_seconds = 0.0
-        self.tracker.reset_waits(self.current_direction)
 
         return self._decision(
             changed=True,
@@ -330,7 +340,6 @@ class TrafficLightController:
         self.pending_direction = None
         self.green_elapsed_seconds = 0.0
         self.yellow_elapsed_seconds = 0.0
-        self.tracker.reset_waits(self.current_direction)
 
         if self.forced_direction != self.current_direction:
             self.forced_direction = None
@@ -351,30 +360,40 @@ class TrafficLightController:
         self,
         priorities: Mapping[str, DirectionPriority],
     ) -> tuple[str, str]:
-        cycle_direction = _next_direction_in_cycle(self.current_direction)
+        cycle_direction = _next_direction_in_cycle(self.current_direction,priorities)
+        if cycle_direction is None:
+            self.green_elapsed_seconds=0.0
+            return (
+                self.current_direction,
+                (
+                    "All directions have zero-queued vehicles, "
+                    "so current lane remains active"
+                )
+            )
         best_direction, best_score = self._highest_priority_direction(priorities)
+        cycle_score = priorities[cycle_direction].score
+        score_advantage = best_score - cycle_score
 
         if (
             best_direction is not None
             and best_direction != cycle_direction
-            and best_score >= self.baseline_priority_score
+            and score_advantage >= self.baseline_priority_score
         ):
             return (
                 best_direction,
                 (
-                    f"Priority baseline allows skipping the cycle to "
+                    f"Priority score advantage allows skipping the cycle to "
                     f"{self._direction_label(best_direction)}."
                 ),
             )
-
         return (
             cycle_direction,
             (
-                f"Priority baseline was not met, so the next cycle direction is "
+                f"Priority score advantage was not met. "
+                f"Skipping empty directions and moving to "
                 f"{self._direction_label(cycle_direction)}."
             ),
         )
-
     def _highest_priority_direction(
         self,
         priorities: Mapping[str, DirectionPriority],
@@ -398,15 +417,13 @@ class TrafficLightController:
     def _max_wait_direction(
         self,
         priorities: Mapping[str, DirectionPriority],
-        *,
-        include_current: bool = False,
     ) -> str | None:
         best_direction: str | None = None
         best_wait = self.max_wait_time_seconds
         best_score = -1.0
 
         for direction in DIRECTIONS:
-            if not include_current and direction == self.current_direction:
+            if direction == self.current_direction:
                 continue
 
             priority = priorities[direction]
@@ -414,14 +431,14 @@ class TrafficLightController:
                 continue
 
             if (
-                priority.longest_wait_seconds > best_wait
+                priority.lane_wait_seconds > best_wait
                 or (
-                    priority.longest_wait_seconds == best_wait
+                    priority.lane_wait_seconds == best_wait
                     and priority.score > best_score
                 )
             ):
                 best_direction = direction
-                best_wait = priority.longest_wait_seconds
+                best_wait = priority.lane_wait_seconds
                 best_score = priority.score
 
         return best_direction
@@ -479,13 +496,26 @@ def _normalized_counts(counts: Mapping[str, int]) -> dict[str, int]:
     return {direction: int(counts.get(direction, 0)) for direction in DIRECTIONS}
 
 
-def _next_direction_in_cycle(current_direction: str | None) -> str:
-    if current_direction not in DIRECTIONS:
-        return DIRECTIONS[0]
+def _next_direction_in_cycle(current_direction: str | None,
+    priorities: Mapping[str, DirectionPriority],
+) -> str | None:
+    """
+    Starting from the next direction in cycle order,
+    find the first direction with a non-zero score.
+    """
 
-    current_index = DIRECTIONS.index(current_direction)
-    next_index = (current_index + 1) % len(DIRECTIONS)
-    return DIRECTIONS[next_index]
+    if current_direction not in DIRECTIONS:
+        start_index = 0
+    else:
+        start_index = DIRECTIONS.index(current_direction)
+
+    for offset in range(1, len(DIRECTIONS) + 1):
+        direction = DIRECTIONS[(start_index + offset) % len(DIRECTIONS)]
+
+        if priorities[direction].car_count > 0:
+            return direction
+
+    return None
 
 
 def _has_waiting_traffic(counts: Mapping[str, int], current_direction: str) -> bool:

@@ -510,7 +510,7 @@ def draw_information_panels(
             f"{DIRECTION_LABELS[direction]}: "
             f"cars {state.latest_counts.get(direction, 0)}, "
             f"score {state.latest_priority_scores.get(direction, 0.0):.1f}, "
-            f"wait {state.latest_longest_waits.get(direction, 0.0):.0f}s"
+            f"lane wait {state.latest_longest_waits.get(direction, 0.0):.0f}s"
         )
         cv2.putText(canvas, text, (35, row_y), FONT, FONT_SCALE, color, TEXT_THICKNESS)
         row_y += 30
