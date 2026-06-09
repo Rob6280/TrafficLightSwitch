@@ -4,8 +4,10 @@ An intelligent traffic light controller that dynamically manages signal timing b
 
 ## Screenshots
 
+### Simulator
 ![Traffic Simulator](images/Simulator.png)
 
+### Detector
 ![YOLO detection](images/Detector.png)
 
 ## Overview
