@@ -4,44 +4,128 @@ An intelligent traffic light controller that dynamically manages signal timing b
 
 ## Overview
 
-This project implements an adaptive traffic light control system that:
+SmartTraffic is a Python-based adaptive traffic signal management system that combines:
 
-- **Prioritizes traffic lanes** by tracking cumulative lane wait times and vehicle queues
-- **Prevents lane starvation** with a max-wait override that forces service to lanes exceeding the wait threshold
-- **Balances traffic flow** using priority scoring across multiple directions
-- **Manages signal phases** with green, yellow clearance, and smooth transitions
+- Computer vision vehicle detection using YOLO
+- Dynamic traffic signal control
+- Lane-priority scheduling
+- Starvation prevention mechanisms
+- Interactive OpenCV simulation
 
-## Key Features
+The system can operate on both predefined traffic scenarios and vehicle counts obtained from real traffic video footage.
 
-- **Dynamic Priority Scoring**: Combines vehicle count and cumulative wait time to determine the next green direction
-- **Lane Starvation Prevention**: Forces the light to the direction whose lane has exceeded the maximum wait time
-- **Yellow Clearance**: Implements a configurable yellow phase between direction changes
-- **Configurable Thresholds**: Adjust minimum/maximum green times, baseline priority scores, and lane wait time limits
+## System Architecture
 
-## How It Works
+**traffic.mp4**
+    ↓
+**YOLO Vehicle Detection**
+    ↓
+**Vehicle Counts Per Direction**
+    ↓
+**TrafficLightController**
+    ↓
+**Signal Decision Engine**
+    ↓
+**OpenCV Visualization**
 
-The `TrafficLightController` class monitors vehicle counts and lane wait times in each direction, updating every second:
+## Project Structure
 
-1. Tracks vehicles in each lane and their cumulative wait times
-2. Calculates lane wait times and priority scores for each direction
-3. Checks for lane wait violations and forces service if the max-wait threshold is exceeded
-4. Transitions between green and yellow phases based on traffic conditions
-5. Returns detailed decision information including reasons for light changes
-
-## Usage
-
-```python
-from Switch import TrafficLightController
-
-controller = TrafficLightController()
-decision = controller.update(
-    counts={'north': 3, 'south': 1, 'east': 0, 'west': 2},
-    elapsed_seconds=1.0
-)
-
-print(decision.direction)  # Current green direction
-print(decision.reason)      # Explanation for this decision
+```text
+SmartTraffic/
+│
+├── Lights.py        # Simulation UI and visualization
+├── Switch.py        # Traffic signal controller logic
+├── Values.py        # Configuration values
+├── detect.py        # YOLO-based vehicle detection
+├── test_cases.py    # Built-in traffic scenarios
+│
+├── traffic.mp4      # Input traffic video
+├── requirements.txt
+└── README.md
 ```
+
+## Controller Logic
+
+The controller evaluates each direction every simulation frame.
+For each approach it tracks:
+
+- Vehicle count
+- Priority score
+- Lane waiting time
+- Current signal state
+
+The controller then applies:
+
+1. Minimum green time protection
+2. Priority-based switching
+3. Maximum green time enforcement
+4. Lane starvation prevention
+5. Yellow clearance handling
+
+## Priority Scoring
+
+Each vehicle accumulates waiting time while its lane is not being served.
+Vehicle Score = Base Priority × Waiting Time
+Lane Score = Sum of Vehicle Scores
+A competing lane may request service once its score advantage exceeds the configurable threshold.
+
+## Lane Starvation Prevention
+
+Low-volume approaches can be ignored indefinitely by traditional priority systems.
+To prevent this, each lane accumulates a lane wait timer whenever it is not receiving service.
+If a lane exceeds:
+MAX_WAIT_TIME_SECONDS
+the controller activates a max-wait override and schedules that lane as the next green direction regardless of priority score.
+This guarantees fairness while still favoring high-demand approaches most of the time.
+
+## Included Test Scenarios
+
+- balanced_cycle
+- single_corridor_dominance
+- rotating_rush_waves
+- near_threshold_competition
+- starvation_prevention
+- detector_noise
+- empty_intersection_recovery
+
+## Running the Simulator
+
+```bash
+python Lights.py
+```
+
+### List Available Scenarios
+
+```bash
+python Lights.py --list-scenarios
+```
+
+### Run a Specific Scenario
+
+```bash
+python Lights.py --scenario balanced_cycle
+```
+
+### Run Headless
+
+```bash
+python Lights.py --headless
+```
+
+### Run All Scenarios
+
+```bash
+python Lights.py --run-all
+```
+
+## Future Improvements
+
+- Multi-intersection coordination
+- Emergency vehicle prioritization
+- Pedestrian crossing support
+- Live camera integration
+- Reinforcement-learning based optimization
+- Traffic analytics dashboard
 
 ## Configuration
 
