@@ -2,6 +2,12 @@
 
 An intelligent traffic light controller that dynamically manages signal timing based on vehicle queue priorities and lane wait times.
 
+## Screenshots
+
+![Traffic Simulator]()
+
+![YOLO detection]()
+
 ## Overview
 
 SmartTraffic is a Python-based adaptive traffic signal management system that combines:

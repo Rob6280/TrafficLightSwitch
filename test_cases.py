@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from detect import TrafficScenario, frame_from_input
+from scenario_loader import TrafficScenario, frame_from_input
 from Values import DEFAULT_FRAME_DURATION_SECONDS, MAX_WAIT_TIME_SECONDS
 
 

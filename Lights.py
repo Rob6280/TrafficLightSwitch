@@ -42,7 +42,7 @@ from Values import (
     YELLOW_LIGHT_COLOR,
     YELLOW_QUEUE_COLOR,
 )
-from detect import TrafficScenario, load_scenario_from_json
+from scenario_loader import TrafficScenario, load_scenario_from_json
 from test_cases import BUILTIN_SCENARIOS
 
 
